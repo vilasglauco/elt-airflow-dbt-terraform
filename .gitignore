@@ -1,17 +1,12 @@
-# -------------------------------------------------------------------
-# Arquivos de STATE do Terraform
-# -------------------------------------------------------------------
+# Arquivos de controle, usados para comparar com o estado real da infraestrutura.
+# Os arquivos .tf diz oq vc quer, o .tfstate diz oq já existe.
 *.tfstate
 *.tfstate.*
-# -------------------------------------------------------------------
-# Diretório interno criado pelo "terraform init"
-# -------------------------------------------------------------------
+# Diretório contendo cache e arquivos temporarios de plugins, provider's e modulos externos.
 .terraform/
-# -------------------------------------------------------------------
-# Variáveis locais
-# -------------------------------------------------------------------
+# Variáveis locais podendo contenter informações sensíveis.
 terraform.tfvars
-# -------------------------------------------------------------------
-# Logs de erro
-# -------------------------------------------------------------------
+# Logs de erros do terraform.
+*.log
+# Arquivo de crash do terraform, contendo informações sensíveis.
 crash.log
