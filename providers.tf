@@ -1,7 +1,7 @@
-# Providers utilizados no projeto.
+# Providers used in this Terraform configuration.
 terraform {
     required_providers {
-        # Provider Docker para gerenciar containers Docker localmente.
+        # Provider Docker to manage Docker resources locally.
         docker = {
             source  = "kreuzwerker/docker"
             version = "~> 3.6.2"
@@ -9,5 +9,5 @@ terraform {
     }
 }
 
-# Configuração do provider Docker
+# Setup of the Docker provider.
 provider "docker" {}
