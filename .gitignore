@@ -1,12 +1,11 @@
-# Arquivos de controle, usados para comparar com o estado real da infraestrutura.
-# Os arquivos .tf diz oq vc quer, o .tfstate diz oq já existe.
+# Control files, used to compare with the real state of the infrastructure.
+# The .tf files say what you want, the .tfstate files say what already exists.
 *.tfstate
 *.tfstate.*
-# Diretório contendo cache e arquivos temporarios de plugins, provider's e modulos externos.
+# Directory containing temporary files for plugins, providers and external modules.
 .terraform/
-# Variáveis locais podendo contenter informações sensíveis.
+# Local variables that may contain sensitive information.
 terraform.tfvars
-# Logs de erros do terraform.
+# Log files about terraform executions.
 *.log
-# Arquivo de crash do terraform, contendo informações sensíveis.
 crash.log
