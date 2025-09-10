@@ -8,6 +8,5 @@ terraform {
         }
     }
 }
-
 # Setup of the Docker provider.
 provider "docker" {}
