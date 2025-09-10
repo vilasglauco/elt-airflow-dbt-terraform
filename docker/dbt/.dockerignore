@@ -1,0 +1,7 @@
+# ----------------------------
+# Docker (docker/)
+# ----------------------------
+# Git repository metadata should not be included in the image.
+.git
+# macOS Finder metadata.
+.DS_Store

@@ -1,11 +1,52 @@
+# ----------------------------
+# Terraform (infra/)
+# ----------------------------
 # Control files, used to compare with the real state of the infrastructure.
 # The .tf files say what you want, the .tfstate files say what already exists.
-*.tfstate
-*.tfstate.*
+*.tfstate*
 # Directory containing temporary files for plugins, providers and external modules.
 .terraform/
 # Local variables that may contain sensitive information.
-terraform.tfvars
+*.tfvars*
 # Log files about terraform executions.
 *.log
-crash.log
+
+# ----------------------------
+# Database (database/)
+# ----------------------------
+# Ignore DuckDB database files.
+database/*.duckdb
+
+# ----------------------------
+# dbt (app/dbt/)
+# ----------------------------
+# dbt user-specific config.
+app/dbt/profiles.yml
+# dbt user-specific config.
+app/dbt/.user.yml
+# Directories created by dbt for compiled code, packages, and logs.
+app/dbt/target/
+app/dbt/dbt_packages/
+app/dbt/logs/
+app/dbt/dbt_modules/
+# Ignore dbt artifacts that are generated after runs.
+app/dbt/manifest.json
+app/dbt/run_results.json
+
+# ----------------------------
+# Python (global)
+# ----------------------------
+# Compiled Python bytecode cache files.
+__pycache__/
+*.py[cod]
+# Local Python virtual environment.
+.venv/
+venv/
+.env/
+env/
+
+# ----------------------------
+# MacOS (global)
+# ----------------------------
+# MacOS system files.
+.DS_Store

@@ -1,0 +1,10 @@
+# This file is used to configure your dbt project.
+name: "duckdb"
+version: "1.0.0"
+config-version: 2
+
+profile: "local_duckdb"
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
