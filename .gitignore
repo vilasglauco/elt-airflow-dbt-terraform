@@ -18,6 +18,16 @@
 database/*.duckdb
 
 # ----------------------------
+# Data (data/)
+# ----------------------------
+# Ignore all files in the data directory except for .gitkeep files to maintain directory structure.
+data/*
+!data/.gitkeep
+!data/raw/.gitkeep
+!data/staging/.gitkeep
+!data/processed/.gitkeep
+
+# ----------------------------
 # dbt (app/dbt/)
 # ----------------------------
 # dbt user-specific config.
