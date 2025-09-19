@@ -1,0 +1,13 @@
+# -------------------------------------------------------------------
+# dbt profiles example
+# This file is used to configure your dbt connection profiles.
+# Copy or rename it to ~/.dbt/profiles.yml when running dbt locally.
+# -------------------------------------------------------------------
+database_duckdb:          # Profile name, must match "profile:" in dbt_project.yml
+  target: default      # Default target to use
+  outputs:
+    default:
+      type: duckdb     # Connection type: DuckDB
+      path: /database/warehouse.duckdb   # Path to the DuckDB file (absolute or relative)
+      schema: main     # Default schema where dbt will create models
+      threads: 4       # Number of threads to use for parallel execution

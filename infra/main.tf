@@ -66,6 +66,18 @@ resource "docker_container" "dbt-runner" {
   image = docker_image.dbt-duckdb-custom.name
   command = ["tail", "-f", "/dev/null"]
 
+  # Variables from dbt environment.
+  env = [
+    "DBT_PROJECT_DIR=/opt/dbt",
+    "DBT_PROFILES_DIR=/opt/dbt",
+  ]
+
+  # Mapping of ports: exposes the dbt service on the port defined in variables.tf.
+  ports {
+    internal = 8081
+    external = var.dbt_port
+  }
+
   # Mounts app directory from local filesystem to the container.
   mounts {
     type = "bind"
