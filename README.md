@@ -1,5 +1,7 @@
 # Data Platform Portfolio Project
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 This repository demonstrates how to build a **Local-to-Cloud data platform** using **Airflow**, **dbt**, **DuckDB**, and **Terraform**, focusing on **reproducibility, reliability, and DataOps best practices**.
 
 The project uses public data (e.g., [ANP GLP](https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis)) to illustrate data ingestion, staging, modeling, and pipeline orchestration.
