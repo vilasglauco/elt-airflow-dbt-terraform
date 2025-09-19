@@ -4,7 +4,7 @@
 # Copy or rename it to ~/.dbt/profiles.yml when running dbt locally.
 # -------------------------------------------------------------------
 database_duckdb:          # Profile name, must match "profile:" in dbt_project.yml
-  target: default      # Default target to use
+  target: default         # Default target to use
   outputs:
     default:
       type: duckdb     # Connection type: DuckDB
