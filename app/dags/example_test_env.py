@@ -1,5 +1,5 @@
 # This is a simple DAG to test the Airflow environment setup.
-# It contains a single task that does nothing (EmptyOperator).
+# It contains a single task that shows "Hello World" in the logs. (PythonOperator)
 
 # Imports may look unused or missing locally, but they are required when Airflow runs inside the container.
 from airflow import DAG
