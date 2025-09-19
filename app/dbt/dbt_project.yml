@@ -3,8 +3,21 @@ name: "duckdb"
 version: "1.0.0"
 config-version: 2
 
-profile: "local_duckdb"
+profile: "database_duckdb"
 
+# Project file directories
 model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+# Output directories
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
+
+# Default configuration for models
+models:
+  duckdb:
+    +materialized: table   # Default can be 'view', 'table', or 'incremental'
+    +schema: main

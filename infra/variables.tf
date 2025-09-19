@@ -9,3 +9,9 @@ variable "airflow_port" {
   type    = number
   default = 8080
 }
+
+# Port to expose the dbt service (default: 8081).
+variable "dbt_port" {
+  type    = number
+  default = 8081
+}
