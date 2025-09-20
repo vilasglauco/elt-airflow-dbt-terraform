@@ -2,7 +2,8 @@
 locals {
   app_dags_dir   = abspath("${path.root}/../app/dags")
   app_dbt_dir    = abspath("${path.root}/../app/dbt")
-  database_dir       = abspath("${path.root}/../database")
+  app_elt_dir    = abspath("${path.root}/../app/elt")
+  database_dir   = abspath("${path.root}/../database")
   docker_dbt_dir = abspath("${path.root}/../docker/dbt")
 }
 
@@ -40,6 +41,13 @@ resource "docker_container" "airflow" {
     type = "bind"
     source = local.app_dags_dir
     target = "/opt/airflow/dags"
+  }
+
+  # Mounts elt directory from local filesystem to the container.
+  mounts {
+    type = "bind"
+    source = local.app_elt_dir
+    target = "/opt/airflow/elt"
   }
 
   # Connects the container to the previously created Docker network.
