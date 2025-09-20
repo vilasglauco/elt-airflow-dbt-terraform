@@ -1,6 +1,9 @@
 # Data Platform Portfolio Project
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.12-informational)
+![Terraform](https://img.shields.io/badge/Terraform-Docker%20provider-informational)
+![dbt](https://img.shields.io/badge/dbt-duckdb-informational)
 
 This repository demonstrates how to build a **Local-to-Cloud data platform** using **Airflow**, **dbt**, **DuckDB**, and **Terraform**, focusing on **reproducibility, reliability, and DataOps best practices**.
 
@@ -94,7 +97,7 @@ terraform apply
 ```
 > This will create Airflow containers, local networks via Docker.
 
-### 4. Initialize dbt
+### 3. Initialize dbt
 
 ```bash
 docker exec -it dbt-runner bash
@@ -102,7 +105,7 @@ dbt debug
 dbt run
 ```
 
-### 4.1. Generate and access dbt documentation
+### 4. Generate and access dbt documentation
 
 ```bash
 docker exec -it dbt-runner bash
@@ -122,7 +125,8 @@ python3 app/elt/ingest_anp_glp.py
 - Web Interface: [http://localhost:8080](http://localhost:8080)
 - No authentication enabled (Airflow 3.0 standalone with SimpleAuthManager disabled).
 
-> Note: In production environments, enabling authentication is recommended.
+> **Security note:**: In production environments, enabling authentication is recommended.
+> Do not expose ports publicly. In production, enable authentication and use secure variables/secrets.
 
 ---
 
@@ -147,6 +151,6 @@ python3 app/elt/ingest_anp_glp.py
 
 ## Author
 
-Glauco Vinicius Vilas Boas  
+Glauco Vilas 
 [LinkedIn](https://www.linkedin.com/in/vilasglauco/)  
 [vilasglauco@gmail.com](mailto:vilasglauco@gmail.com)
