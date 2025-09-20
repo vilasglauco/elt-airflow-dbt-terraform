@@ -28,6 +28,7 @@ resource "docker_container" "airflow" {
   # - Disable example DAGs.
   # - Setup SimpleAuthManager so that all users are admins (only for local development to remove User authentication).
   env = [
+    "PYTHONPATH=/opt/airflow",
     "AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags",
     "AIRFLOW__CORE__LOAD_EXAMPLES=False",
     "AIRFLOW__CORE__AUTH_MANAGER=airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager",
