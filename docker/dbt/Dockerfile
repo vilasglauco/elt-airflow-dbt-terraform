@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         unzip \
+        passwd \
     && curl -L "https://github.com/duckdb/duckdb/releases/download/v1.1.3/duckdb_cli-linux-aarch64.zip" -o /tmp/duckdb.zip \
     && unzip /tmp/duckdb.zip -d /usr/local/bin \
     && rm /tmp/duckdb.zip \
@@ -33,5 +34,9 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt
 
-# Copy the entire app project into the container.
-COPY . .
+# Create dbt user with high UID/GID
+RUN groupadd -g 50001 dbt \
+    && useradd -m -u 50001 -g 50001 -d /opt/dbt dbt
+
+# Switch to dbt user
+USER dbt
