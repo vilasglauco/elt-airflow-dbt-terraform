@@ -24,7 +24,7 @@ resource "null_resource" "ensure_host_data_dir" {
 }
 
 # Creates a Docker volume to persist Airflow data.
-resource "docker_volume" "airflow_data" {
+resource "docker_volume" "airflow_volume" {
   name = "airflow_data"
   driver_opts = {
     type   = "none"
@@ -42,7 +42,7 @@ resource "null_resource" "ensure_database_dir" {
 }
 
 # Creates a Docker volume to persist database data.
-resource "docker_volume" "database_data" {
+resource "docker_volume" "database_volume" {
   name = "database_data"
   driver_opts = {
     type   = "none"
@@ -93,7 +93,7 @@ resource "docker_container" "airflow" {
   # Mounts data directory using named volume from host directory.
   mounts {
     type = "volume"
-    source = docker_volume.airflow_data.name
+    source = docker_volume.airflow_volume.name
     target = "/data"
   }
 
@@ -145,7 +145,7 @@ resource "docker_container" "dbt-runner" {
   # Mounts database directory using named volume from host directory.
   mounts {
     type = "volume"
-    source = docker_volume.database_data.name
+    source = docker_volume.database_volume.name
     target = "/database"
   }
 
