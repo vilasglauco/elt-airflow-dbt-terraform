@@ -61,13 +61,16 @@ def build_paths(
     return outfile
 
 
-def staging_download(url: str, outfile: Path, staging_dir: Path) -> None:
+def staging_download(url: str, outfile: Path, staging_dir: Path, dataset: str) -> None:
     """
     Download to a deterministic `.part` temp file in `staging_dir`, then move it to
     the final destination.
     """
-    staging_dir.mkdir(parents=True, exist_ok=True)
-    tmp_path = staging_dir / (outfile.name + ".part")
+
+    dataset_tmp_dir = staging_dir / dataset
+    dataset_tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_path = dataset_tmp_dir / (outfile.name + ".part")
+
     try:
         # Remove any leftover from previous failed attempt
         if tmp_path.exists():
@@ -132,7 +135,10 @@ def run_extract(
 
     try:
         staging_download(
-            f"{base_url}/ca-{target_year}-{target_sem}.zip", outfile, outdir_tmp
+            f"{base_url}/ca-{target_year}-{target_sem}.zip",
+            outfile,
+            outdir_tmp,
+            dataset
         )
 
     except urllib.error.HTTPError as e:
@@ -158,6 +164,7 @@ def run_extract(
                         f"{base_url}/ca-{target_year}-{target_sem}.zip",
                         outfile,
                         outdir_tmp,
+                        dataset
                     )
                 except urllib.error.HTTPError as e2:
                     if e2.code == 404:
