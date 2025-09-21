@@ -8,13 +8,13 @@ DBT_PORT	?= 8081
 .PHONY: up down plan dbt-docs logs-airflow logs-dbt help
 
 help:
-	@echo "Alvos disponíveis:"
+	@echo "Available targets:"
 	@echo "  make up              -> terraform init + apply"
 	@echo "  make down            -> terraform destroy"
 	@echo "  make plan            -> terraform plan"
-	@echo "  make dbt-docs        -> dbt docs generate + serve (porta $(DBT_PORT))"
-	@echo "  make logs-airflow    -> tail -f dos logs do $(AIRFLOW_CONTAINER) container"
-	@echo "  make logs-dbt        -> tail -f do container $(DBT_CONTAINER)"
+	@echo "  make dbt-docs        -> dbt docs generate + serve (port $(DBT_PORT))"
+	@echo "  make logs-airflow    -> tail -f logs from $(AIRFLOW_CONTAINER) container"
+	@echo "  make logs-dbt        -> tail -f logs from $(DBT_CONTAINER)"
 
 up:
 	cd $(INFRA_DIR) && terraform init && terraform apply -auto-approve
