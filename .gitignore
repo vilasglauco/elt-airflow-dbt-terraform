@@ -31,6 +31,8 @@ data/*
 app/dbt/profiles.yml
 # dbt user-specific config.
 app/dbt/.user.yml
+# dbt command history.
+app/dbt/.bash_history
 
 # Directories created by dbt for compiled code, packages, and logs.
 app/dbt/target/
