@@ -130,6 +130,21 @@ python3 app/elt/ingest_anp_glp.py
 
 ---
 
+## Makefile Commands
+
+For convenience, a `Makefile` is provided at the root of the project with common automation tasks:
+
+```bash
+make up           # Start infrastructure (Terraform apply)
+make down         # Destroy infrastructure (Terraform destroy)
+make dbt-docs     # Generate and serve dbt documentation
+make logs-airflow # Stream Airflow logs
+make logs-dbt     # Stream dbt-runner logs
+make help         # Show all available make commands with descriptions
+```
+
+---
+
 ## Ignored Directories and Files
 
 - (`data/`) – Contains raw and intermediate files, ignored by git.
@@ -145,7 +160,7 @@ python3 app/elt/ingest_anp_glp.py
 
 ## Next Steps
 
-- [ ] Airflow DAG to schedule extraction of ANP GLP data.
+- [ ] Load data into the DuckDB warehouse.
 
 ---
 
