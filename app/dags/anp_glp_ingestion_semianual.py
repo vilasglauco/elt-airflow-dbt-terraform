@@ -5,7 +5,6 @@ It uses the run_extract function defined in elt/ingest_anp_glp.py to perform the
 Configuration parameters, such as output directories and base URL, are defined in the DAG params.
 """
 
-
 from pathlib import Path
 
 from airflow.utils import timezone
@@ -33,7 +32,8 @@ from elt.ingest_anp_glp import run_extract
     tags=["anp", "glp", "ingestion", "semiannual", "python"],
 )
 def anp_glp_ingestion_semianual():
-    """ DAG for semiannual ingestion of ANP GLP using a Python task. """
+    """DAG for semiannual ingestion of ANP GLP using a Python task."""
+
     @task(task_id="extract")
     def run_ingestion(
         year: str,
@@ -44,17 +44,25 @@ def anp_glp_ingestion_semianual():
         outdir_tmp: str,
         base_url: str,
     ):
-        # Call the run_extract function with the provided parameters
-        outfile = run_extract(
+        # Convert string parameters to Path objects
+        outdir = Path(outdir)
+        outdir_tmp = Path(outdir_tmp)
+
+        # Call the run_extract function with parameters from the DAG context
+        result = run_extract(
             year=year,
             sem=sem,
             ingestion_date=ingestion_date,
             dataset=dataset,
-            outdir=Path(outdir),
-            outdir_tmp=Path(outdir_tmp),
+            outdir=outdir,
+            outdir_tmp=outdir_tmp,
             base_url=base_url,
         )
-        return str(outfile)
+
+        return {
+            "file_path": str(result["file_path"]),  # Path convertido para string
+            "dataset": result["dataset"],
+        }
 
     # Define the task execution with parameters from the DAG context
     run_ingestion(

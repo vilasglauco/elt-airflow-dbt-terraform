@@ -6,9 +6,7 @@ If the file is not available for the given semester, attempts a fallback to the 
 of the same year.
 """
 
-import datetime as dt
 import logging
-import os
 import shutil
 import urllib.error
 import urllib.request
@@ -35,6 +33,7 @@ def validate_sem(sem: str) -> str:
     sem = str(sem).zfill(2)
     if sem not in {"01", "02"}:
         raise ValueError("SEM must be '01' (1st semester) or '02' (2nd semester)")
+
     return sem
 
 
@@ -52,12 +51,14 @@ def build_paths(
         ingestion_date: The ingestion date string in 'YYYY-MM-DD_HHMMSS' format.
 
     Returns:
-        A Path object pointing to the output file location.
+        Path: The output file location.
     """
-    partition_key = f"{target_year}-{target_sem}"
-    partition_dir = outdir / dataset / f"partition={partition_key}"
-    filename = f"govbr-anpglp-ca-{target_year}-{target_sem}-{ingestion_date}.zip"
-    outfile = partition_dir / filename
+    partition_dir = outdir / dataset / f"partition={target_year}-{target_sem}"
+    outfile = (
+        partition_dir
+        / f"govbr-anpglp-ca-{target_year}-{target_sem}-{ingestion_date}.zip"
+    )
+
     return outfile
 
 
@@ -103,7 +104,7 @@ def run_extract(
     outdir: Path,
     outdir_tmp: Path,
     base_url: str,
-) -> Path:
+) -> dict:
     """
     Downloads a semiannual ANP dataset ZIP file based on the provided year and semester.
 
@@ -119,33 +120,52 @@ def run_extract(
         base_url: The base URL for downloading the dataset.
 
     Returns:
-        Path to the downloaded file.
+        dict: A dictionary containing:
+            - "file_path" (str): Path to the downloaded file.
+            - "year" (str): The year for which the file was downloaded.
+            - "sem" (str): The semester used for the download.
+            - "ingestion_date" (str): The ingestion date string.
+            - "dataset" (str): The dataset name.
+            - "outdir" (str): The base output directory.
+            - "outdir_tmp" (str): The temporary staging directory.
+            - "base_url" (str): The base URL used for the download.
+            - "size_kb" (float): The size of the downloaded file in kilobytes.
     """
     sem = validate_sem(sem)
     target_year, target_sem = str(year), sem
     outfile = build_paths(dataset, outdir, target_year, target_sem, ingestion_date)
 
     if outfile.exists():
-        logging.info("[skip] File already exists: %s; skipping download.", outfile)
-        return outfile
+        logging.info("File already exists: %s; skipping download.", outfile)
+        size = outfile.stat().st_size
 
-    logging.info(
-        "[extract] Downloading: %s/ca-%s-%s.zip", base_url, target_year, target_sem
-    )
+        return {
+            "file_path": outfile,
+            "year": target_year,
+            "sem": target_sem,
+            "ingestion_date": ingestion_date,
+            "dataset": dataset,
+            "outdir": outdir,
+            "outdir_tmp": outdir_tmp,
+            "base_url": base_url,
+            "size_kb": size / 1024,
+        }
+
+    logging.info("Downloading: %s/ca-%s-%s.zip", base_url, target_year, target_sem)
 
     try:
         staging_download(
             f"{base_url}/ca-{target_year}-{target_sem}.zip",
             outfile,
             outdir_tmp,
-            dataset
+            dataset,
         )
 
     except urllib.error.HTTPError as e:
         if e.code == 404:
             if sem == "02":
                 logging.warning(
-                    "[warn] File not found for %s-%s, falling back to first semester (01)...",
+                    "File not found for %s-%s, falling back to first semester (01)...",
                     year,
                     sem,
                 )
@@ -154,7 +174,7 @@ def run_extract(
                     dataset, outdir, target_year, target_sem, ingestion_date
                 )
                 logging.info(
-                    "[extract] Downloading: %s/ca-%s-%s.zip",
+                    "Downloading: %s/ca-%s-%s.zip",
                     base_url,
                     target_year,
                     target_sem,
@@ -164,19 +184,19 @@ def run_extract(
                         f"{base_url}/ca-{target_year}-{target_sem}.zip",
                         outfile,
                         outdir_tmp,
-                        dataset
+                        dataset,
                     )
                 except urllib.error.HTTPError as e2:
                     if e2.code == 404:
                         logging.error(
-                            "[error] File not found for %s-%s even after fallback to '01'.",
+                            "File not found for %s-%s even after fallback to '01'.",
                             year,
                             target_sem,
                         )
                     raise
             else:
                 logging.error(
-                    "[error] File not found for %s-%s and no earlier semester to fallback to.",
+                    "File not found for %s-%s and no earlier semester to fallback to.",
                     year,
                     sem,
                 )
@@ -185,39 +205,16 @@ def run_extract(
             raise
 
     size = outfile.stat().st_size
-    logging.info("[done] %.1f KB saved", size / 1024)
+    logging.info("%.1f KB saved", size / 1024)
 
-    return outfile
-
-
-if __name__ == "__main__":
-    # Defaults for CLI execution
-    year_arg = os.environ.get("YEAR", dt.date.today().strftime("%Y"))
-    sem_arg = os.environ.get("SEM", "01" if dt.date.today().month <= 6 else "02")
-    ingestion_date_arg = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    dataset_arg = os.environ.get("DATASET", "anp_glp")
-    outdir_arg = Path(
-        os.environ.get(
-            "OUTDIR", str(Path(__file__).resolve().parents[2] / "data" / "raw")
-        )
-    )
-    outdir_tmp_arg = Path(
-        os.environ.get(
-            "OUTDIR_TMP", str(Path(__file__).resolve().parents[2] / "data" / "staging")
-        )
-    )
-    base_url_arg = os.environ.get(
-        "BASE_URL",
-        "https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/arquivos/shpc/dsas/ca",
-    )
-
-    outfile_path = run_extract(
-        year=year_arg,
-        sem=sem_arg,
-        ingestion_date=ingestion_date_arg,
-        dataset=dataset_arg,
-        outdir=outdir_arg,
-        outdir_tmp=outdir_tmp_arg,
-        base_url=base_url_arg,
-    )
-    logging.info("Output file: %s", outfile_path)
+    return {
+        "file_path": outfile,
+        "year": target_year,
+        "sem": target_sem,
+        "ingestion_date": ingestion_date,
+        "dataset": dataset,
+        "outdir": outdir,
+        "outdir_tmp": outdir_tmp,
+        "base_url": base_url,
+        "size_kb": size / 1024,
+    }
