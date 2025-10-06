@@ -28,11 +28,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies file into the image.
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt requirements.txt
 
 # Install Python dependencies and remove the temporary requirements file.
-RUN pip install -r /tmp/requirements.txt \
-    && rm /tmp/requirements.txt
+RUN pip install -r requirements.txt \
+    && rm requirements.txt
 
 # Create dbt user with high UID/GID
 RUN groupadd -g 50001 dbt \

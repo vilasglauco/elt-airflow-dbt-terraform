@@ -33,6 +33,8 @@ app/dbt/profiles.yml
 app/dbt/.user.yml
 # dbt command history.
 app/dbt/.bash_history
+# dbt command history for DuckDB.
+app/dbt/.duckdb_history
 
 # Directories created by dbt for compiled code, packages, and logs.
 app/dbt/target/

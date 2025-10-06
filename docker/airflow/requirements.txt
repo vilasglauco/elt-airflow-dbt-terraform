@@ -1,0 +1,2 @@
+# This file lists the additional dependencies to be installed in the Airflow Docker image.
+duckdb==1.1.3
