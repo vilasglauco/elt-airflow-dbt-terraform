@@ -70,7 +70,7 @@ resource "docker_container" "airflow" {
 
   # Mapping of ports: exposes the Airflow UI on the port defined in variables.tf.
   ports {
-    internal = var.airflow_external_port
+    internal = var.airflow_internal_port
     external = var.airflow_external_port
   }
 
