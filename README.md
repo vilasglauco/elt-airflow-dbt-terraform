@@ -40,42 +40,45 @@ Main flow:
 
 ```bash
 .
-├── app/                     # Main code
-│   ├── dags/                # Airflow DAGs
-│   │   ├── anp_glp_ingestion_semianual.py
-│   │   └── example_test_env.py
-│   ├── dbt/                 # dbt + DuckDB project
+├── app/                        # Main application code (Airflow DAGs, dbt project, and ELT scripts)
+│   ├── dags/                   # Airflow DAGs (pipeline orchestration)
+│   │   ├── anp_glp_ingestion_semianual.py  # Ingests and loads ANP GLP semiannual dataset
+│   │   └── example_test_env.py             # Example DAG for testing local environment
+│   ├── dbt/                    # dbt + DuckDB project (data modeling layer)
 │   │   ├── dbt_project.yml
-│   │   ├── models/
-│   │   │   └── example_test_env.sql
-│   │   ├── profiles.example.yml
-│   │   ├── profiles.yml
-│   │   └── target/          # dbt output (compiled, run results, docs)
-│   └── elt/                 # Ingestion and load scripts
-│       ├── ingest_anp_glp.py
-│       └── load_anp_glp.py
-├── data/                    # Local storage for all project files
-│   ├── incoming_path/       
-│   ├── processed_path/      
-│   └── work_path/           
-├── database/                # DuckDB warehouse (*gitignored)
+│   │   ├── models/             # SQL transformations and tests
+│   │   │   └── example_test_env.sql         # Example SQL for testing local environment
+│   │   ├── profiles.example.yml              # Template dbt profile (copy as profiles.yml)
+│   │   ├── profiles.yml                      # Local dbt configuration (ignored in git)
+│   │   └── target/             # dbt output (compiled SQL, run results, docs)
+│   └── elt/                    # Ingestion and load scripts (Extract + Load)
+│       ├── ingest_anp_glp.py  # Downloads and stages ANP GLP data
+│       └── load_anp_glp.py    # Loads staged data into DuckDB
+│
+├── data/                       # Local storage for data files (consistent with Airflow & Python configs)
+│   ├── incoming_path/          # Raw downloaded files
+│   ├── processed_path/         # Files already loaded into the warehouse
+│   └── work_path/              # Temporary area for cleaning/transformation
+│
+├── database/                   # Local DuckDB warehouse (*gitignored)
 │   └── warehouse.duckdb
 │
-├── docker/                  # Custom images
+├── docker/                     # Custom Docker images for Airflow and dbt
 │   ├── airflow/
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
+│   │   ├── Dockerfile          # Custom Airflow image
+│   │   └── requirements.txt    # Extra Python dependencies for Airflow
 │   └── dbt/
-│       ├── Dockerfile       
-│       └── requirements.txt
+│       ├── Dockerfile          # Custom dbt image
+│       └── requirements.txt    # Extra Python dependencies for dbt
 │
-├── infra/                   # Terraform infrastructure
-│   ├── main.tf
-│   ├── outputs.tf
-│   ├── providers.tf
-│   └── variables.tf
+├── infra/                      # Terraform IaC (Docker provider) for local infrastructure
+│   ├── main.tf                # Defines containers (Airflow, dbt-runner, volumes, networks)
+│   ├── outputs.tf             # Exposes outputs (URL)
+│   ├── providers.tf           # Docker provider configuration
+│   └── variables.tf           # Input variables (ports, image names, etc.)
+│
 ├── LICENSE
-├── Makefile
+├── Makefile                   # Automation for common tasks (start, stop, docs, logs)
 └── README.md
 ```
 
@@ -146,8 +149,9 @@ docker exec -it dbt-runner duckdb /database/warehouse.duckdb
 
 ### 6. Access Airflow
 
-- Web Interface: [http://localhost:8080](http://localhost:8080)
-- No authentication enabled (Airflow 3.0 standalone with SimpleAuthManager disabled).
+Web Interface: [http://localhost:8080](http://localhost:8080)
+
+No authentication enabled (Airflow 3.0 standalone with SimpleAuthManager disabled).
 
 > **Security note:** In production environments, enabling authentication is recommended.
 > Do not expose ports publicly. In production, enable authentication and use secure variables/secrets.
@@ -192,6 +196,6 @@ make help         # Show all available make commands with descriptions
 
 ## Author
 
-Glauco Vilas 
+Glauco Vilas
 [LinkedIn](https://www.linkedin.com/in/vilasglauco/)  
 [vilasglauco@gmail.com](mailto:vilasglauco@gmail.com)
