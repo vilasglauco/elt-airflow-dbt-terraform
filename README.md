@@ -196,6 +196,6 @@ make help         # Show all available make commands with descriptions
 
 ## Author
 
-Glauco Vilas
+**Glauco Vilas**  
 [LinkedIn](https://www.linkedin.com/in/vilasglauco/)  
-[vilasglauco@gmail.com](mailto:vilasglauco@gmail.com)
+[vilasglauco@gmail.com](mailto:vilasglauco@gmail.com)  
