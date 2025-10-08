@@ -1,11 +1,11 @@
 """Module to extract a ZIP file containing CSV files and load them into a DuckDB database."""
 
+import hashlib
 import logging
 import os
-import uuid
+import shutil
 import zipfile
 from pathlib import Path
-import shutil
 
 import duckdb
 
@@ -36,9 +36,10 @@ def prepare_schema(conn: duckdb.DuckDBPyConnection, schema: str) -> None:
 def create_control_files_table(conn: duckdb.DuckDBPyConnection) -> None:
     """Ensure the 'processed_files' control table exists within the control schema.
 
-    The table tracks ingested files by recording their source filename, batch ID,
-    ingestion timestamp, and number of rows ingested. It prevents duplicate processing
-    of the same file within the same batch.
+    The table tracks ingested files by recording their source filename, ingestion timestamp,
+    number of rows, file checksum, and load status. The primary key on `source_file`
+    prevents reprocessing the same file path, and a unique constraint on `file_checksum`
+    prevents reprocessing identical file content.
 
     Args:
         conn (duckdb.DuckDBPyConnection): Active DuckDB connection object.
@@ -49,14 +50,40 @@ def create_control_files_table(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         f"""
         CREATE TABLE IF NOT EXISTS {PROCESSED_FILES_TABLE} (
-            source_file VARCHAR NOT NULL,
-            batch_id VARCHAR NOT NULL,
-            ingestion_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            rows_ingested BIGINT NOT NULL,
-            PRIMARY KEY (source_file, batch_id)
+            source_file VARCHAR NOT NULL
+            ,ingestion_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ,rows_ingested BIGINT NOT NULL
+            ,file_checksum VARCHAR NOT NULL
+            ,load_status VARCHAR DEFAULT 'loaded'
+            ,PRIMARY KEY (source_file)
+            ,CONSTRAINT uq_checksum UNIQUE (file_checksum)
         );
         """
     )
+
+
+def calculate_checksum(file_path: Path) -> str:
+    """Calculate SHA-256 checksum for the given file path.
+
+    Args:
+        file_path (Path): Path to the file for which to calculate the checksum.
+
+    Returns:
+        str: Hexadecimal string representation of the file's SHA-256 checksum.
+
+    Raises:
+        OSError: If there are I/O issues reading the file.
+    """
+    h = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            # Read and update hash string value in blocks of 8K
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+    except OSError as e:
+        logging.error("Error reading file %s for checksum: %s", file_path, e)
+        raise
+    return h.hexdigest()
 
 
 def extract_zip(source_zip: Path) -> Path:
@@ -143,7 +170,9 @@ def move_zip_to_processed(source_zip: Path, processed_path: Path) -> None:
     try:
         os.makedirs(destination_path, exist_ok=True)
     except OSError as e:
-        logging.error("Failed to create processed directory %s: %s", destination_path, e)
+        logging.error(
+            "Failed to create processed directory %s: %s", destination_path, e
+        )
         raise
 
     if source_zip.exists() and source_zip.is_file():
@@ -204,17 +233,15 @@ def load_data_to_duckdb(
         6. For each CSV file:
             - Skip if already ingested in the current batch.
             - Begin a transaction.
-            - Load data into a staging table, adding columns for source_file, batch_id, and 
-             ingestion timestamp.
-            - If the final table does not exist, create it from the staging table. Otherwise, insert 
+            - Load data into a staging table, adding columns for source_file and ingestion 
+                timestamp.
+            - If the final table does not exist, create it from the staging table. Otherwise, insert
                 staging data into the existing final table.
             - Record ingestion metadata in the control table.
             - Commit the transaction.
         7. After processing all CSVs, move the original ZIP file to the 'processed' directory.
         8. Clean up extracted files.
         9. Close the database connection.
-
-    The 'batch_id' uniquely identifies this load operation, ensuring idempotency and traceability.
 
     Args:
         final_file (Path): Path to the original ZIP file.
@@ -226,18 +253,16 @@ def load_data_to_duckdb(
          after processing.
 
     Raises:
-        FileNotFoundError: If the ZIP file or extracted directory does not exist or contains no 
+        FileNotFoundError: If the ZIP file or extracted directory does not exist or contains no
          CSV files.
         duckdb.Error: If any DuckDB-related errors occur during connection or queries.
         OSError: If any I/O errors occur during reading files, extracting, or moving files.
 
     Notes:
         - Each CSV file is loaded in its own transaction to isolate failures.
-        - The staging table is truncated before loading each batch to avoid data contamination.
-        - The control table prevents reprocessing files within the same batch.
+        - The control table prevents reprocessing files based on file path and content checksum.
         - Moves the original ZIP file after processing, not the extracted CSVs.
-        - The batch_id is a UUID hex string unique per load invocation.
-        - Raises OSError if there are I/O or permission issues during extraction, file moving, or 
+        - Raises OSError if there are I/O or permission issues during extraction, file moving, or
             directory cleanup.
     """
     source_zip = Path(final_file)
@@ -264,7 +289,9 @@ def load_data_to_duckdb(
     prepare_schema(conn, raw_schema)
     prepare_schema(conn, staging_schema)
     prepare_schema(conn, CONTROL_SCHEMA)
-    logging.info("Schemas ensured: %s, %s, %s", raw_schema, staging_schema, CONTROL_SCHEMA)
+    logging.info(
+        "Schemas ensured: %s, %s, %s", raw_schema, staging_schema, CONTROL_SCHEMA
+    )
 
     # Ensure processed_files ingestion table exists
     create_control_files_table(conn)
@@ -272,12 +299,11 @@ def load_data_to_duckdb(
 
     # Find all CSV files in the extracted directory
     csv_files = list(extracted_path.glob("*.csv"))
-    logging.info("Found %d CSV files in extracted directory %s", len(csv_files), extracted_path)
+    logging.info(
+        "Found %d CSV files in extracted directory %s", len(csv_files), extracted_path
+    )
     if not csv_files:
         raise FileNotFoundError(f"No CSV files found in directory: {extracted_path}")
-
-    # Unique batch ID for this load operation
-    batch_id = uuid.uuid4().hex
 
     staging_table = f"staging_{table_name}"
     if not does_table_exist(conn, staging_schema, staging_table):
@@ -288,7 +314,6 @@ def load_data_to_duckdb(
             CREATE TABLE "{staging_schema}"."{staging_table}" AS
             SELECT * 
                 ,''::VARCHAR AS source_file
-                ,''::VARCHAR AS batch_id
                 ,NULL::TIMESTAMP AS ingestion_ts
             FROM read_csv_auto('{template_csv}', HEADER=True)
             WHERE 1=0; -- No data, just structure
@@ -307,25 +332,24 @@ def load_data_to_duckdb(
     for csv_file in csv_files:
         csv_file_path = str(csv_file)
 
-        # Check if file was already ingested (using source_file + batch_id for history)
-        file_already_ingested = (
+        # Compute checksum and skip if the exact file content was already processed
+        checksum = calculate_checksum(csv_file)
+        file_already_processed = (
             conn.execute(
                 f"""
-                SELECT COUNT(*) 
+                SELECT COUNT(*)
                 FROM {PROCESSED_FILES_TABLE}
-                WHERE source_file = ? 
-                    AND batch_id = ?;
+                WHERE file_checksum = ?
                 """,
-                (csv_file_path, batch_id),
+                (checksum,),
             ).fetchone()[0]
             > 0
         )
 
-        if file_already_ingested:
+        if file_already_processed:
             logging.info(
-                "Skipping file %s as it was already ingested in batch %s.",
+                "Skipping file %s as it was already ingested (checksum match).",
                 csv_file,
-                batch_id,
             )
             continue
 
@@ -337,7 +361,6 @@ def load_data_to_duckdb(
                 INSERT INTO "{staging_schema}"."{staging_table}" 
                     SELECT *
                     ,'{csv_file_path}' AS source_file 
-                    ,'{batch_id}' AS batch_id
                     ,CURRENT_TIMESTAMP AS ingestion_ts
                 FROM read_csv_auto('{csv_file_path}', HEADER=True);
                 """
@@ -388,13 +411,18 @@ def load_data_to_duckdb(
                 (csv_file_path,),
             ).fetchone()[0]
 
-            # Register the file as ingested with rows_ingested
+            # Register the file as ingested with rows_ingested and checksum
             conn.execute(
                 f"""
-                INSERT INTO {PROCESSED_FILES_TABLE} (source_file, batch_id, rows_ingested)
-                VALUES (?, ?, ?);
+                INSERT INTO {PROCESSED_FILES_TABLE} (
+                    source_file                    
+                    ,rows_ingested
+                    ,file_checksum
+                    ,load_status
+                )
+                VALUES (?, ?, ?, 'loaded');
                 """,
-                (csv_file_path, batch_id, rows_ingested),
+                (csv_file_path, rows_ingested, checksum),
             )
             logging.info(
                 "Registered file %s in processed_files with %d rows ingested",
