@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: stg_historico_precos_combustiveis_glp
+    description: "Modelo de staging para o histórico de preços de combustíveis GLP conforme pesquisa da ANP. Contém dados brutos limpos, padronizados e com tipos de dados corrigidos."
+    columns:
+      - name: sk_revenda_coleta
+        data_type: varchar
+        description: "Chave surrogada única para cada combinação de CNPJ da revenda, data da coleta e produto."
+        tests:
+          - not_null: {}
+          - unique: {}
+      - name: regiao_sigla
+        data_type: varchar
+        description: "Sigla da Região da revenda pesquisada."
+        tests:
+          - not_null: {}
+          - accepted_values:
+              arguments:
+                values: ['N', 'NE', 'S', 'SE', 'CO']
+      - name: estado_sigla
+        data_type: varchar
+        description: "Sigla da Unidade Federativa (UF) da revenda pesquisada."
+        tests:
+          - not_null: {}
+          - accepted_values:
+              arguments:
+                values: ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+      - name: municipio
+        data_type: varchar
+        description: "Nome do município da revenda pesquisada."
+        tests:
+          - not_null: {}
+      - name: nome_revenda
+        data_type: varchar
+        description: "Nome do estabelecimento de revenda do combustível."
+      - name: cnpj_revenda
+        data_type: varchar
+        description: "Número do Cadastro Nacional de Pessoa Jurídica da revenda pesquisada."
+        tests:
+          - not_null: {}
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:  
+                regex: '^[0-9]+$'
+          - dbt_expectations.expect_column_value_lengths_to_equal:
+              arguments:
+                value: 14
+      - name: nome_rua
+        data_type: varchar
+        description: "Nome do logradouro da revenda pesquisada."
+      - name: numero_rua
+        data_type: varchar
+        description: "Número do logradouro da revenda pesquisada."
+      - name: complemento
+        data_type: varchar
+        description: "Complemento do logradouro da revenda pesquisada."
+      - name: bairro
+        data_type: varchar
+        description: "Nome do bairro da revenda pesquisada."
+      - name: cep
+        data_type: varchar
+        description: "Número do Código do Endereço Postal (CEP) do logradouro da revenda pesquisada."
+        tests:
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:              
+                regex: '^[0-9]*$'
+          - dbt_expectations.expect_column_value_lengths_to_equal:
+              arguments:
+                value: 8
+      - name: produto
+        data_type: varchar
+        description: "Nome do combustível pesquisado."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['GLP']
+      - name: data_coleta
+        data_type: date
+        description: "Data da coleta do(s) preço(s), convertida para tipo DATE."
+        tests:
+          - not_null: {}
+      - name: valor_venda
+        data_type: decimal(10, 2)
+        description: "Preço de venda ao consumidor final praticado pelo revendedor, na data da coleta. Convertido para decimal."
+        tests:
+          - not_null: {}
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: valor_compra
+        data_type: decimal(10, 2)
+        description: "Preço de distribuição (preço de venda da distribuidora para o posto revendedor de combustível). * Série disponível até agosto de 2020. Convertido para decimal."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: unidade_medida
+        data_type: varchar
+        description: "Unidade de medida."
+      - name: bandeira
+        data_type: varchar
+        description: "Noma da Bandeira da revenda. O Posto bandeirado é aquele que opta por exibir a marca comercial de um distribuidor, o posto deverá vender somente combustíveis fornecidos pelo distribuidor detentor da marca comercial exibida aos consumidores. Já o Posto bandeira branca é o que opta por não exibir marca comercial de nenhuma distribuidora."
+        tests:
+          - not_null: {}
+      - name: partition
+        data_type: varchar
+        description: "Valor da partição (YYYY-MM) obtido do caminho do arquivo CSV, indicando o semestre de referência do conjunto de dados."
+        tests:
+          - not_null: {}
+      - name: source_file
+        data_type: varchar
+        description: "Nome do arquivo de origem de onde os dados foram carregados."
+        tests:
+          - not_null: {}
+      - name: ingestion_ts
+        data_type: timestamp
+        description: "Timestamp de quando os dados foram inseridos no Data Warehouse."

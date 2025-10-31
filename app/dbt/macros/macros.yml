@@ -1,0 +1,18 @@
+version: 2
+
+macros:
+  - name: generate_schema_name
+    description: |
+      Overrides dbt's default schema naming behavior.
+
+      If a custom schema (`custom_schema_name`) is defined for a model,
+      it will be used directly. Otherwise, the macro falls back to the target's default schema
+      (`target.schema`).
+
+      This prevents dbt from automatically prefixing the main schema name
+      (e.g., `main_`) to custom schema names.
+    arguments:
+      - name: custom_schema_name
+        description: Schema name defined in the model (can be `none`).
+      - name: node
+        description: Internal dbt object representing the model being compiled.
