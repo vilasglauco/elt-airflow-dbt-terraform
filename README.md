@@ -138,6 +138,7 @@ To run the data transformations, get a shell inside the dbt-runner container usi
 make dbt-shell
 # Now, inside the container's shell:
 dbt debug # Test the connection to DuckDB
+dbt deps  # Install dependencies
 dbt run   # Execute the models
 dbt test  # Execute the models tests
 ```
