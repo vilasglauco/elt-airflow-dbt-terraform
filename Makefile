@@ -14,7 +14,7 @@ help:
 	@echo "  make plan            -> terraform plan"
 	@echo "  make dbt-shell       -> open bash shell in $(DBT_CONTAINER) container"
 	@echo "  make dbt-docs        -> dbt docs generate + serve (port $(DBT_PORT))"
-	@echo "  make duck-db         -> open duckdb CLI to inspect /database/warehouse.duckdb"
+	@echo "  make duck-db         -> open duckdb shell to inspect /database/warehouse.duckdb"
 	@echo "  make logs-airflow    -> tail -f logs from $(AIRFLOW_CONTAINER) container"
 
 up:
@@ -39,3 +39,4 @@ duck-db:
 logs-airflow:
 	@echo ">> Logs Airflow:"
 	-@docker logs -f $(AIRFLOW_CONTAINER)
+
