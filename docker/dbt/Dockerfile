@@ -40,3 +40,4 @@ RUN groupadd -g 50001 dbt \
 
 # Switch to dbt user
 USER dbt
+
