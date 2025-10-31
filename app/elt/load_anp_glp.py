@@ -179,8 +179,7 @@ def load_data_to_duckdb(
                 staging data into the existing final table.
             - Record ingestion metadata in the control table.
             - Commit the transaction.
-        6. After processing all CSVs, move the original CSV file to the 'processed' directory.
-        7. Close the database connection.
+        6. Each CSV file is moved to the 'processed' directory immediately after successful processing or if already previously ingested.
 
     Args:
         final_file (Path): Path to the original CSV file.
@@ -202,7 +201,7 @@ def load_data_to_duckdb(
         - Each CSV file is loaded in its own transaction to isolate failures.
         - Each file is processed and committed independently to ensure isolated recovery.
         - The control table prevents reprocessing files based on file path and content checksum.
-        - Moves the original CSV file after processing.
+        - Moves each CSV file after successful processing or if already processed.
         - Raises OSError if there are I/O or permission issues during file moving.
     """
     source_file = Path(final_file)
