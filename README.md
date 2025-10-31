@@ -1,7 +1,7 @@
 # Data Platform Portfolio Project
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.12-informational)
+![Python](https://img.shields.io/badge/Python-3.10-informational)
 ![Terraform](https://img.shields.io/badge/Terraform-Docker%20provider-informational)
 ![dbt](https://img.shields.io/badge/dbt-duckdb-informational)
 
@@ -13,7 +13,7 @@ The project uses public data (e.g., [ANP GLP](https://www.gov.br/anp/pt-br/centr
 
 ## Overview
 
-- **Python (3.12)** – Ingestion and warehouse loading scripts.
+- **Python (3.10)** – Ingestion and warehouse loading scripts.
 - **dbt + DuckDB** – Local analytical data modeling.
 - **Airflow 3.0+** – Pipeline orchestration (standalone mode).
 - **Docker** – Base for custom images and local execution.
@@ -92,69 +92,77 @@ Main flow:
   - [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed.
 
 - **Language**
-  - [Python 3.12+](https://www.python.org/) installed.
+  - [Python 3.10+](https://www.python.org/) installed.
 
 ### 1. Clone the repository
 
-Clone the repository and navigate to the project folder:
+Clone the repository and navigate to the project folder.
 
 ```bash
 git clone https://github.com/vilasglauco/elt-airflow-dbt-terraform.git
 cd elt-airflow-dbt-terraform
 ```
 
-### 2. Initialize local infrastructure with Terraform
+### 2. Create dbt Profile
 
-Initialize Docker containers, volumes, and networks using Terraform:
-
-```bash
-cd infra
-terraform init
-terraform apply
-```
-> This will create Airflow containers, Docker volumes and local networks.
-
-### 3. Initialize dbt
-
-Run dbt inside the `dbt-runner` container to set up and execute transformations:
+Navigate to the dbt project folder and create your local profiles.yml from the example template. This file is ignored by git.
 
 ```bash
-docker exec -it dbt-runner bash
-dbt debug
-dbt run
+cp app/dbt/profiles.example.yml app/dbt/profiles.yml
 ```
 
-### 4. Generate and access dbt documentation
+### 3. Start the Infrastructure
 
-Generate and serve dbt documentation locally:
+Use the Makefile to build and start all services (Airflow, dbt-runner) with a single command.
 
 ```bash
-docker exec -it dbt-runner bash
-dbt docs generate
-dbt docs serve --host 0.0.0.0 --port 8081
-```
-> Access at: [http://localhost:8081](http://localhost:8081)
-
-### 5. Access duckdb
-
-Open an interactive DuckDB shell inside the `dbt-runner` container:
-
-```bash
-docker exec -it dbt-runner duckdb /database/warehouse.duckdb
+make up
 ```
 
-> **Note:** DuckDB does not support multiple concurrent writers. 
-> If another process or container is connected to the same database with write permissions, 
-> attempts to open it (even in read-only mode) may fail due to file locks. 
+> This command initializes Terraform and applies the configuration, creating the necessary Docker containers, volumes, and networks.
 
-### 6. Access Airflow
+### 4. Access Airflow
 
-Web Interface: [http://localhost:8080](http://localhost:8080)
+The Airflow UI will be available at [http://localhost:8080](http://localhost:8080).
 
 No authentication enabled (Airflow 3.0 standalone with SimpleAuthManager disabled).
 
 > **Security note:** In production environments, enabling authentication is recommended.
 > Do not expose ports publicly. In production, enable authentication and use secure variables/secrets.
+
+### 5. Run dbt Models
+
+To run the data transformations, get a shell inside the dbt-runner container using the Makefile.
+
+```bash
+make dbt-shell
+# Now, inside the container's shell:
+dbt debug # Test the connection to DuckDB
+dbt run   # Execute the models
+dbt test  # Execute the models tests
+```
+
+### 6. Explore dbt Docs
+
+Generate and serve dbt documentation locally.
+
+```bash
+make dbt-docs
+```
+
+> Access at: [http://localhost:8081](http://localhost:8081)
+
+### 7. Access DuckDB
+
+You can directly interact with the DuckDB database using the CLI
+
+```bash
+make duck-db
+```
+
+> **Note:** DuckDB does not support multiple concurrent writers. 
+> If another process or container is connected to the same database with write permissions, 
+> attempts to open it (even in read-only mode) may fail due to file locks. 
 
 ---
 
@@ -165,10 +173,11 @@ For convenience, a `Makefile` is provided at the root of the project with common
 ```bash
 make up           # Start infrastructure (Terraform apply)
 make down         # Destroy infrastructure (Terraform destroy)
+make plan         # Show Terraform execution plan
+make dbt-shell    # Open a bash shell inside the dbt-runner container
 make dbt-docs     # Generate and serve dbt documentation
 make duck-db      # Open interactive DuckDB shell inside dbt-runner container
 make logs-airflow # Stream Airflow logs
-make logs-dbt     # Stream dbt-runner logs
 make help         # Show all available make commands with descriptions
 ```
 
@@ -184,13 +193,6 @@ make help         # Show all available make commands with descriptions
 - (`app/dbt/target/`), (`app/dbt/dbt_packages/`), (`app/dbt/logs/`), (`app/dbt/dbt_modules/`) – Temporary directories and dbt packages.
 - Python: (`__pycache__/`), (`*.py[cod]`), (`.venv/`), (`venv/`), (`.env/`), (`env/`) – Cache files/directories and virtual environments.
 - Docker: (`**/.dockerignore`), (`**/Dockerfile~`), (`**/docker-compose.override.yml`).
-
----
-
-## Next Steps
-
-- [ ] Run dbt models to deduplicate raw data (dbt run)
-- [ ] Apply basic data cleaning transformations (e.g., trim strings, fix nulls)
 
 ---
 
