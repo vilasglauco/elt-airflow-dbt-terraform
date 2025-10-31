@@ -1,5 +1,5 @@
 # Use the official Apache Airflow image as the base image.
-FROM apache/airflow:3.0.6-python3.12
+FROM apache/airflow:3.1.1-python3.10
 
 # Set environment variables:
 # - PIP_NO_CACHE_DIR=1: avoid caching pip packages.
@@ -13,7 +13,7 @@ ENV PIP_NO_CACHE_DIR=1 \
 USER airflow
 
 # Copy Python dependencies file into the image.
-COPY requirements.txt requirements.txt
+COPY --chown=airflow:airflow requirements.txt .
 
 # Install Python dependencies and remove the temporary requirements file.
 RUN pip install -r requirements.txt \
