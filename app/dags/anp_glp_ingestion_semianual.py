@@ -1,9 +1,8 @@
-"""DAG for semiannual ingestion of ANP GLP using a Python task."""
+"""Airflow DAG for semiannual ingestion of ANP GLP dataset into DuckDB using Python tasks."""
 
 from pathlib import Path
 
-from airflow.decorators import dag, task
-from airflow.utils import timezone
+from airflow.sdk import dag, task, timezone
 from elt.ingest_anp_glp import extract_data_from_anp
 from elt.load_anp_glp import load_data_to_duckdb
 
@@ -18,7 +17,7 @@ from elt.load_anp_glp import load_data_to_duckdb
     params={
         "DATASET_BASE_URL": (
             "https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/arquivos/"
-            "shpc/dsas/ca"
+            "shpc/dsas/glp"
         ),
         "INCOMING_PATH": "/data/incoming_path",
         "WORK_PATH": "/data/work_path",
@@ -26,7 +25,7 @@ from elt.load_anp_glp import load_data_to_duckdb
         "SOURCE_NAME": "anp_glp",
         "WAREHOUSE_PATH": "/database/warehouse.duckdb",
         "RAW_SCHEMA": "raw",
-        "STAGING_SCHEMA": "staging",
+        "STAGING_SCHEMA": "ingest_stage",
         "TABLE_NAME": "historico_precos_combustiveis_glp",
     },
     tags=["anp", "glp", "ingestion", "semiannual", "python"],
@@ -72,6 +71,7 @@ def anp_glp_ingestion_semianual():
         work_path: str,
         dataset_base_url: str,
     ) -> dict[str, str]:
+        """Extracts the ANP GLP dataset for a given semester and returns the final file path."""
         # Convert string parameters to Path objects
         incoming_path = Path(incoming_path)
         work_path = Path(work_path)
