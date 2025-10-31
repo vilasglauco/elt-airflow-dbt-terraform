@@ -73,7 +73,7 @@ variable "dbt_runner_container_name" {
 # Docker image tag for the Airflow image.
 variable "airflow_image_tag" {
   type    = string
-  default = "3.0.6-python3.12"
+  default = "3.1.1-python3.10"
 }
 
 # Docker image tag for the dbt image.
