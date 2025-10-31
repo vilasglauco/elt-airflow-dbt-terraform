@@ -19,5 +19,7 @@ clean-targets: ["target", "dbt_packages"]
 # Default configuration for models
 models:
   duckdb:
-    +materialized: table   # Default can be 'view', 'table', or 'incremental'
-    +schema: main
+    staging:
+      +schema: staging
+      +materialized: incremental
+      +incremental_strategy: delete+insert

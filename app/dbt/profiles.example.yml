@@ -9,5 +9,4 @@ database_duckdb:          # Profile name, must match "profile:" in dbt_project.y
     default:
       type: duckdb     # Connection type: DuckDB
       path: /database/warehouse.duckdb   # Path to the DuckDB file (absolute or relative)
-      schema: main     # Default schema where dbt will create models
       threads: 4       # Number of threads to use for parallel execution

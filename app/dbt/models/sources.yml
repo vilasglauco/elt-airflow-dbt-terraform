@@ -1,0 +1,55 @@
+version: 2
+
+sources:
+  - name: anp 
+    schema: raw 
+    tables:
+      - name: historico_precos_combustiveis_glp 
+        description: "Tabela com dados brutos da série histórica de preços de GLP, conforme pesquisa da ANP."
+        freshness:
+          warn_after:
+            count: 180
+            period: day
+          error_after:
+            count: 190
+            period: day
+        loaded_at_field: "ingestion_ts"
+        columns:
+          - name: "Regiao - Sigla"
+            description: "Sigla da Região da revenda pesquisada."
+          - name: "Estado - Sigla"
+            description: "Sigla da Unidade Federativa (UF) da revenda pesquisada."
+          - name: "Municipio"
+            description: "Nome do município da revenda pesquisada."
+          - name: "Revenda"
+            description: "Nome do estabelecimento de revenda do combustível."
+          - name: "CNPJ da Revenda"
+            description: "Número do Cadastro Nacional de Pessoa Jurídica da revenda pesquisada."
+          - name: "Nome da Rua"
+            description: "Nome do logradouro da revenda pesquisada."
+          - name: "Numero Rua"
+            description: "Número do logradouro da revenda pesquisada."
+          - name: "Complemento"
+            description: "Complemento do logradouro da revenda pesquisada."
+          - name: "Bairro"
+            description: "Nome do bairro da revenda pesquisada."
+          - name: "Cep"
+            description: "Número do Código do Endereço Postal (CEP) do logradouro da revenda pesquisada."
+          - name: "Produto"
+            description: "Nome do combustível pesquisado."
+          - name: "Data da Coleta"
+            description: "Data da coleta do(s) preço(s)."
+          - name: "Valor de Venda"
+            description: "Preço de venda ao consumidor final praticado pelo revendedor, na data da coleta."
+          - name: "Valor de Compra"
+            description: "Preço de distribuição (preço de venda da distribuidora para o posto revendedor de combustível). * Série disponível até agosto de 2020."
+          - name: "Unidade de Medida"
+            description: "Unidade de Medida."
+          - name: "Bandeira"
+            description: "Nome da Bandeira da revenda. O Posto bandeirado é aquele que opta por exibir a marca comercial de um distribuidor, o posto deverá vender somente combustíveis fornecidos pelo distribuidor detentor da marca comercial exibida aos consumidores. Já o Posto bandeira branca é o que opta por não exibir marca comercial de nenhuma distribuidora."
+          - name: "partition"
+            description: "Valor da partição (YYYY-MM) obtido do caminho do arquivo CSV, indicando o período de referência do conjunto de dados."
+          - name: source_file
+            description: "Nome do arquivo de origem de onde os dados foram carregados."
+          - name: ingestion_ts
+            description: "Timestamp de quando os dados foram inseridos no Data Warehouse, usado para verificar a atualização semestral (freshness)."
