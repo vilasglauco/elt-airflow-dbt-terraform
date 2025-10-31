@@ -1,4 +1,4 @@
-"""Downloads a semiannual ANP dataset ZIP file based on the provided year and semester.
+"""Downloads a semiannual ANP dataset CSV file based on the provided year and semester.
 If the file is not available for the given semester, attempts a fallback to the first semester
 of the same year.
 """
@@ -49,16 +49,16 @@ def build_paths(
         ingestion_date (str): The ingestion date string in 'YYYY-MM-DD_HHMMSS' format.
 
     Returns:
-        Path: Full output file path as a `pathlib.Path` object
-            (incoming_path/source_name/partition=YYYY-SS/<file>.zip).
+        Path: Path object for the final CSV file as a `pathlib.Path` object
+            (incoming_path/source_name/partition=YYYY-SS/<file>.csv).
     """
     # Construct partitioned directory and final file path
     partition_path = (
         incoming_path / source_name / f"partition={target_year}-{target_sem}"
     )
     final_file = (
-        partition_path / f"govbr-anpglp-ca-{target_year}-{target_sem}-"
-        f"{ingestion_date}.zip"
+        partition_path / f"govbr-anp-glp-{target_year}-{target_sem}-"
+        f"{ingestion_date}.csv"
     )
     return final_file
 
@@ -146,7 +146,7 @@ def extract_data_from_anp(
     work_path: Path,
     dataset_base_url: str,
 ) -> dict:
-    """Downloads a semiannual ANP dataset ZIP file based on the provided year and semester.
+    """Downloads a semiannual ANP dataset CSV file based on the provided year and semester.
     If the file is not available for the given semester, attempts a fallback to the first
      semester ('01').
 
@@ -168,7 +168,7 @@ def extract_data_from_anp(
             "source_name" (str): The source identifier used,
             "incoming_path" (Path): The base output directory,
             "work_path" (Path): The temporary staging directory,
-            "base_url" (str) : The base URL used for the download,
+            "dataset_base_url" (str): The base URL used for the download,
             "size_kb" (float): The size of the downloaded file in kilobytes,
         }
     """
@@ -195,7 +195,7 @@ def extract_data_from_anp(
         }
 
     logging.info(
-        "Downloading: %s/ca-%s-%s.zip",
+        "Downloading: %s/glp-%s-%s.csv",
         dataset_base_url,
         target_year,
         target_sem,
@@ -203,7 +203,7 @@ def extract_data_from_anp(
 
     try:
         download_to_work_path(
-            f"{dataset_base_url}/ca-{target_year}-{target_sem}.zip",
+            f"{dataset_base_url}/glp-{target_year}-{target_sem}.csv",
             final_file,
             work_path,
             source_name,
@@ -222,14 +222,14 @@ def extract_data_from_anp(
                     source_name, incoming_path, target_year, target_sem, ingestion_date
                 )
                 logging.info(
-                    "Downloading: %s/ca-%s-%s.zip",
+                    "Downloading: %s/glp-%s-%s.csv",
                     dataset_base_url,
                     target_year,
                     target_sem,
                 )
                 try:
                     download_to_work_path(
-                        f"{dataset_base_url}/ca-{target_year}-{target_sem}.zip",
+                        f"{dataset_base_url}/glp-{target_year}-{target_sem}.csv",
                         final_file,
                         work_path,
                         source_name,

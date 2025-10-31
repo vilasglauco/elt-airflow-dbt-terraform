@@ -1,10 +1,9 @@
-"""Module to extract a ZIP file containing CSV files and load them into a DuckDB database."""
+"""Module to load file into a DuckDB database."""
 
 import hashlib
 import logging
 import os
 import shutil
-import zipfile
 from pathlib import Path
 
 import duckdb
@@ -12,6 +11,7 @@ import duckdb
 # Constants
 CONTROL_SCHEMA = "control_file"
 PROCESSED_FILES_TABLE = f'"{CONTROL_SCHEMA}"."processed_files"'
+INCOMING_PATH = "/data/incoming_path"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -86,45 +86,6 @@ def calculate_checksum(file_path: Path) -> str:
     return h.hexdigest()
 
 
-def extract_zip(source_zip: Path) -> Path:
-    """Extract a ZIP archive into a dedicated directory named after the ZIP file's stem.
-
-    The extracted files are placed inside a subdirectory 'extracted/<zip_stem>' relative
-    to the ZIP file location. This organization helps manage multiple extractions.
-
-    Args:
-        source_zip (Path): Path to the ZIP file to extract.
-
-    Returns:
-        Path: Directory path where the ZIP contents were extracted.
-
-    Raises:
-        FileNotFoundError: If the ZIP file does not exist.
-        zipfile.BadZipFile: If the file is not a valid ZIP archive.
-        OSError: If there are I/O or permission issues during extraction.
-    """
-    # Ensure the ZIP file path is a Path object
-    source_zip = Path(source_zip)
-
-    if not source_zip.exists():
-        raise FileNotFoundError(f"ZIP not Found: {source_zip}")
-
-    # Create extraction directory based on ZIP file name
-    zip_stem = source_zip.stem
-    extracted_path = source_zip.parent / "extracted" / zip_stem
-    try:
-        os.makedirs(extracted_path, exist_ok=True)
-    except OSError as e:
-        logging.error("Failed to create extraction directory %s: %s", extracted_path, e)
-        raise
-
-    with zipfile.ZipFile(source_zip, "r") as zf:
-        # Extract all contents into the extraction directory
-        zf.extractall(extracted_path)
-        logging.info(
-            "Extracted ZIP file %s to directory %s", source_zip, extracted_path
-        )
-    return extracted_path
 
 
 def does_table_exist(
@@ -155,18 +116,21 @@ def does_table_exist(
     return result > 0
 
 
-def move_zip_to_processed(source_zip: Path, processed_path: Path) -> None:
-    """Move the original ZIP file to the 'processed' directory, including the partition directory.
+def move_file_to_processed(source_file: Path, processed_path: Path) -> None:
+    """Move the original file to the 'processed' directory, including the partition directory.
 
     Args:
-        source_zip (Path): Path to the original ZIP file.
-        processed_path (Path): Base directory path where the ZIP file will be moved.
+        source_file (Path): Path to the original file under INCOMING_PATH.
+        processed_path (Path): Base directory path where the file will be moved.
 
     Raises:
         OSError: If the move operation fails due to I/O or permission errors.
     """
-    # Ensure the processed directory exists
-    destination_path = processed_path / source_zip.parent.name
+    # Determine the relative path from the INCOMING_PATH to preserve directory structure
+    relative_path = Path(os.path.relpath(source_file, start=Path(INCOMING_PATH)))
+
+    # Ensure the processed directory exists (preserving the full relative path)
+    destination_path = processed_path / relative_path.parent
     try:
         os.makedirs(destination_path, exist_ok=True)
     except OSError as e:
@@ -175,43 +139,20 @@ def move_zip_to_processed(source_zip: Path, processed_path: Path) -> None:
         )
         raise
 
-    if source_zip.exists() and source_zip.is_file():
-        # Move the ZIP file to the processed directory
-        shutil.move(str(source_zip), str(destination_path / source_zip.name))
+    if source_file.exists() and source_file.is_file():
+        # Move the file to the processed directory
+        shutil.move(str(source_file), str(destination_path / source_file.name))
         logging.info(
-            "Moved original ZIP file %s to processed directory %s",
-            source_zip,
+            "Moved original file %s to processed directory %s",
+            source_file,
             destination_path,
         )
     else:
         logging.warning(
-            "Original ZIP file not found at expected location: %s", source_zip
+            "Original file not found at expected location: %s", source_file
         )
 
 
-def cleanup_extracted_path(extracted_path: Path) -> None:
-    """Remove the subdirectory corresponding to the processed ZIP file inside the
-    extracted directory.
-
-    Args:
-        extracted_path (Path): Path to the extracted directory corresponding to the ZIP file.
-
-    Raises:
-        OSError: If removal of the directory fails due to I/O or permission errors.
-    """
-    if extracted_path.exists() and extracted_path.is_dir():
-        try:
-            shutil.rmtree(extracted_path)
-            logging.info("Removed extracted subdirectory %s", extracted_path)
-        except OSError as e:
-            logging.error(
-                "Failed to remove extracted subdirectory %s: %s", extracted_path, e
-            )
-    else:
-        logging.warning(
-            "Extracted subdirectory %s does not exist or is not a directory",
-            extracted_path,
-        )
 
 
 def load_data_to_duckdb(
@@ -222,15 +163,14 @@ def load_data_to_duckdb(
     table_name: str,
     processed_path: Path,
 ) -> None:
-    """Load CSV files extracted from a ZIP archive into a DuckDB database using a staging approach.
+    """Load CSV files directly into a DuckDB database using a staging approach.
 
     The Load flow is as follows:
-        1. Extract the ZIP archive to a temporary directory.
-        2. Verify the extracted directory contains CSV files.
-        3. Connect to the DuckDB database located at 'warehouse_path'.
-        4. Ensure the final schema, staging schema, and control schema exist.
-        5. Ensure the 'processed_files' control table exists to track ingested files.
-        6. For each CSV file:
+        1. Verify the directory containing the CSV files.
+        2. Connect to the DuckDB database located at 'warehouse_path'.
+        3. Ensure the final schema, staging schema, and control schema exist.
+        4. Ensure the 'processed_files' control table exists to track ingested files.
+        5. For each CSV file:
             - Skip if already ingested in the current batch.
             - Begin a transaction.
             - Load data into a staging table, adding columns for source_file and ingestion 
@@ -239,47 +179,39 @@ def load_data_to_duckdb(
                 staging data into the existing final table.
             - Record ingestion metadata in the control table.
             - Commit the transaction.
-        7. After processing all CSVs, move the original ZIP file to the 'processed' directory.
-        8. Clean up extracted files.
-        9. Close the database connection.
+        6. Each CSV file is moved to the 'processed' directory immediately after successful processing or if already previously ingested.
 
     Args:
-        final_file (Path): Path to the original ZIP file.
+        final_file (Path): Path to the original CSV file.
         warehouse_path (Path): Path to the DuckDB database file.
         raw_schema (str): Target schema name for the final table.
         staging_schema (str): Schema name for staging tables.
         table_name (str): Name of the final table to load data into.
-        processed_path (Path): Directory path where the original ZIP file will be moved 
+        processed_path (Path): Directory path where the original CSV file will be moved 
          after processing.
 
     Raises:
-        FileNotFoundError: If the ZIP file or extracted directory does not exist or contains no
+        FileNotFoundError: If the CSV file or its directory does not exist or contains no
          CSV files.
+        ValueError: If the file type is not supported.
         duckdb.Error: If any DuckDB-related errors occur during connection or queries.
-        OSError: If any I/O errors occur during reading files, extracting, or moving files.
+        OSError: If any I/O errors occur during reading files or moving files.
 
     Notes:
         - Each CSV file is loaded in its own transaction to isolate failures.
+        - Each file is processed and committed independently to ensure isolated recovery.
         - The control table prevents reprocessing files based on file path and content checksum.
-        - Moves the original ZIP file after processing, not the extracted CSVs.
-        - Raises OSError if there are I/O or permission issues during extraction, file moving, or
-            directory cleanup.
+        - Moves each CSV file after successful processing or if already processed.
+        - Raises OSError if there are I/O or permission issues during file moving.
     """
-    source_zip = Path(final_file)
+    source_file = Path(final_file)
 
-    if not source_zip.exists():
-        raise FileNotFoundError(f"ZIP file not found: {source_zip}")
-
-    # Extract ZIP contents
-    extracted_path = extract_zip(source_zip)
-
-    # Ensure the extracted directory exists
-    if not extracted_path.exists():
-        raise FileNotFoundError(f"Extracted directory not found: {extracted_path}")
+    if not source_file.exists():
+        raise FileNotFoundError(f"File not found: {source_file}")
 
     # Connect to DuckDB
     try:
-        conn = duckdb.connect(database=warehouse_path, read_only=False)
+        conn = duckdb.connect(database=str(warehouse_path), read_only=False)
         logging.info("Connected successfully to DuckDB at %s", warehouse_path)
     except duckdb.Error as e:
         logging.error("Failed to connect to DuckDB at %s: %s", warehouse_path, e)
@@ -297,35 +229,39 @@ def load_data_to_duckdb(
     create_control_files_table(conn)
     logging.info("Control table ensured: %s", PROCESSED_FILES_TABLE)
 
-    # Find all CSV files in the extracted directory
-    csv_files = list(extracted_path.glob("*.csv"))
+    # Find all CSV files in the CSV file's directory
+    csv_files = list(source_file.parent.glob("*.csv"))
     logging.info(
-        "Found %d CSV files in extracted directory %s", len(csv_files), extracted_path
+        "Found %d CSV files in directory %s",
+        len(csv_files),
+        source_file.parent,
     )
     if not csv_files:
-        raise FileNotFoundError(f"No CSV files found in directory: {extracted_path}")
+        raise FileNotFoundError(
+            f"No CSV files found in directory: {source_file.parent}"
+        )
 
-    staging_table = f"staging_{table_name}"
-    if not does_table_exist(conn, staging_schema, staging_table):
+    staging_table_name = table_name
+    if not does_table_exist(conn, staging_schema, table_name):
         # Create staging table based on the first CSV file's structure
         template_csv = str(csv_files[0])
         conn.execute(
             f"""
-            CREATE TABLE "{staging_schema}"."{staging_table}" AS
+            CREATE TABLE "{staging_schema}"."{staging_table_name}" AS
             SELECT * 
                 ,''::VARCHAR AS source_file
                 ,NULL::TIMESTAMP AS ingestion_ts
-            FROM read_csv_auto('{template_csv}', HEADER=True)
+            FROM read_csv_auto('{template_csv}', HEADER=True, hive_partitioning=1)
             WHERE 1=0; -- No data, just structure
             """
         )
 
     # Truncate staging table to ensure it's empty before loading
-    conn.execute(f'TRUNCATE TABLE "{staging_schema}"."{staging_table}";')
+    conn.execute(f'TRUNCATE TABLE "{staging_schema}"."{staging_table_name}";')
     logging.info(
         "Truncated staging table %s.%s before loading new batch",
         staging_schema,
-        staging_table,
+        staging_table_name,
     )
 
     # Load each CSV file into the staging table with a transaction per file
@@ -348,9 +284,11 @@ def load_data_to_duckdb(
 
         if file_already_processed:
             logging.info(
-                "Skipping file %s as it was already ingested (checksum match).",
+                "Skipping file %s as it was already ingested (checksum match). Moving to processed_path.",
                 csv_file,
             )
+            # Move the original file to the 'processed' directory including the partition directory
+            move_file_to_processed(csv_file, processed_path)
             continue
 
         try:
@@ -358,7 +296,7 @@ def load_data_to_duckdb(
             # Insert data from CSV into staging table with ingestion columns
             conn.execute(
                 f"""
-                INSERT INTO "{staging_schema}"."{staging_table}" 
+                INSERT INTO "{staging_schema}"."{staging_table_name}" 
                     SELECT *
                     ,'{csv_file_path}' AS source_file 
                     ,CURRENT_TIMESTAMP AS ingestion_ts
@@ -369,7 +307,7 @@ def load_data_to_duckdb(
                 "Loaded data from file %s into staging table %s.%s",
                 csv_file,
                 staging_schema,
-                staging_table,
+                staging_table_name,
             )
 
             if not does_table_exist(conn, raw_schema, table_name):
@@ -378,7 +316,7 @@ def load_data_to_duckdb(
                     f"""
                     CREATE TABLE "{raw_schema}"."{table_name}" AS
                         SELECT * 
-                    FROM "{staging_schema}"."{staging_table}";
+                    FROM "{staging_schema}"."{staging_table_name}";
                     """
                 )
                 logging.info(
@@ -392,7 +330,7 @@ def load_data_to_duckdb(
                     f"""
                     INSERT INTO "{raw_schema}"."{table_name}"
                         SELECT * 
-                    FROM "{staging_schema}"."{staging_table}";
+                    FROM "{staging_schema}"."{staging_table_name}";
                     """
                 )
                 logging.info(
@@ -405,7 +343,7 @@ def load_data_to_duckdb(
             rows_ingested = conn.execute(
                 f"""
                 SELECT COUNT(*) 
-                FROM "{staging_schema}"."{staging_table}"
+                FROM "{staging_schema}"."{staging_table_name}"
                 WHERE source_file = ?;
                 """,
                 (csv_file_path,),
@@ -433,6 +371,9 @@ def load_data_to_duckdb(
             conn.execute("COMMIT")
             logging.info("Committed transaction successfully for file %s", csv_file)
 
+            # Move the original file to the 'processed' directory including the partition directory
+            move_file_to_processed(csv_file, processed_path)
+
         except duckdb.Error as e:
             conn.execute("ROLLBACK")
             logging.error(
@@ -450,13 +391,7 @@ def load_data_to_duckdb(
             )
             raise
 
-    # Move the original ZIP file to the 'processed' directory including the partition directory
-    move_zip_to_processed(source_zip, processed_path)
-
-    # Cleanup extracted subdirectory corresponding to the ZIP file
-    cleanup_extracted_path(extracted_path)
-
     conn.commit()
-    logging.info("ETL load process completed successfully for ZIP file %s", final_file)
+    logging.info("ETL load process completed successfully for file %s", final_file)
     conn.close()
     logging.info("Closed DuckDB connection.")
