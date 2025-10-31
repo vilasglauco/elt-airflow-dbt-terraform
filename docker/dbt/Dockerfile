@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies file into the image.
-COPY requirements.txt requirements.txt
+COPY requirements.txt .
 
 # Install Python dependencies and remove the temporary requirements file.
 RUN pip install -r requirements.txt \
@@ -40,3 +40,4 @@ RUN groupadd -g 50001 dbt \
 
 # Switch to dbt user
 USER dbt
+
