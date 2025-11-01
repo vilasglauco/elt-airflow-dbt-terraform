@@ -179,7 +179,8 @@ def load_data_to_duckdb(
                 staging data into the existing final table.
             - Record ingestion metadata in the control table.
             - Commit the transaction.
-        6. Each CSV file is moved to the 'processed' directory immediately after successful processing or if already previously ingested.
+        6. Each CSV file is moved to the 'processed' directory immediately after successful 
+         processing or if already previously ingested.
 
     Args:
         final_file (Path): Path to the original CSV file.
@@ -284,7 +285,8 @@ def load_data_to_duckdb(
 
         if file_already_processed:
             logging.info(
-                "Skipping file %s as it was already ingested (checksum match). Moving to processed_path.",
+                "Skipping file %s as it was already ingested (checksum match). " \
+                "Moving to processed_path.",
                 csv_file,
             )
             # Move the original file to the 'processed' directory including the partition directory
