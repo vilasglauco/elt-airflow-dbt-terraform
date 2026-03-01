@@ -194,7 +194,6 @@ def load_data_to_duckdb(
     Raises:
         FileNotFoundError: If the CSV file or its directory does not exist or contains no
          CSV files.
-        ValueError: If the file type is not supported.
         duckdb.Error: If any DuckDB-related errors occur during connection or queries.
         OSError: If any I/O errors occur during reading files or moving files.
 
