@@ -13,11 +13,11 @@ The project uses public data (e.g., [ANP GLP](https://www.gov.br/anp/pt-br/centr
 
 ## Overview
 
-- **Python (3.10)** – Ingestion and warehouse loading scripts.
+- **Python 3.10** – Ingestion and warehouse loading scripts.
 - **dbt + DuckDB** – Local analytical data modeling.
 - **Airflow 3.0+** – Pipeline orchestration (standalone mode).
 - **Docker** – Base for custom images and local execution.
-- **Terraform (docker provider)** – Infrastructure as code, managing containers and local networks.
+- **Terraform 1.13.0 (docker provider 3.6.2)** – Infrastructure as code, managing containers and local networks.
 
 ---
 
@@ -95,7 +95,7 @@ Main flow:
 
 - **Infrastructure**
   - [Docker](https://www.docker.com/) installed and running.
-  - [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed.
+  - [Terraform 1.13.0](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) installed.
 
 - **Language**
   - [Python 3.10+](https://www.python.org/) installed.
