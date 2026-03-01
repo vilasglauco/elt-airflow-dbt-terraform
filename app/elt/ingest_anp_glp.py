@@ -147,8 +147,8 @@ def extract_data_from_anp(
     dataset_base_url: str,
 ) -> dict:
     """Downloads a semiannual ANP dataset CSV file based on the provided year and semester.
-    If the file is not available for the given semester, attempts a fallback to the first
-     semester ('01').
+    If the file is not available for the given semester, attempts a fallback to the previous
+    semester.
 
     Args:
         year (str): The target year as a string, e.g., '2025'.
@@ -171,6 +171,12 @@ def extract_data_from_anp(
             "dataset_base_url" (str): The base URL used for the download,
             "size_kb" (float): The size of the downloaded file in kilobytes,
         }
+
+    Raises:
+        ValueError: If the semester is invalid.
+        urllib.error.HTTPError: If the file cannot be downloaded (e.g., 404 Not Found) even after fallback.
+        urllib.error.URLError: If the URL is invalid or a network error occurs.
+        OSError: If there are issues with file operations.
     """
     sem = validate_sem(sem)
     target_year, target_sem = str(year), sem
@@ -211,46 +217,46 @@ def extract_data_from_anp(
 
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            if sem == "02":
-                logging.warning(
-                    "File not found for %s-%s, falling back to first semester (01)...",
-                    year,
-                    sem,
+            logging.warning(
+                "File not found for %s-%s. Attempting fallback.", 
+                year, 
+                sem
+            )
+
+            # Determine fallback semester and year
+            if sem == "02":    
+                target_sem = "01" # Fallback to the first semester of the same year
+            else: # sem == "01"
+                target_year = str(int(year) - 1)
+                target_sem = "02"  # Fallback to the second semester of the previous year
+    
+            final_file = build_paths(
+                source_name, incoming_path, target_year, target_sem, ingestion_date
+            )
+            logging.info(
+                "Fallback attempt: downloading: %s/glp-%s-%s.csv",
+                dataset_base_url,
+                target_year,
+                target_sem,
+            )
+                
+            try:
+                download_to_work_path(
+                    f"{dataset_base_url}/glp-{target_year}-{target_sem}.csv",
+                    final_file,
+                    work_path,
+                    source_name,
                 )
-                target_sem = "01"
-                final_file = build_paths(
-                    source_name, incoming_path, target_year, target_sem, ingestion_date
-                )
-                logging.info(
-                    "Downloading: %s/glp-%s-%s.csv",
-                    dataset_base_url,
-                    target_year,
-                    target_sem,
-                )
-                try:
-                    download_to_work_path(
-                        f"{dataset_base_url}/glp-{target_year}-{target_sem}.csv",
-                        final_file,
-                        work_path,
-                        source_name,
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    logging.error(
+                        "Fallback failed. File not found for %s-%s and %s-%s.",
+                        year, 
+                        sem, 
+                        target_year, 
+                        target_sem
                     )
-                except urllib.error.HTTPError as e2:
-                    if e2.code == 404:
-                        logging.error(
-                            "File not found for %s-%s even after fallback to '01'.",
-                            year,
-                            target_sem,
-                        )
-                    raise
-            else:
-                logging.error(
-                    "File not found for %s-%s and no earlier semester to fallback to.",
-                    year,
-                    sem,
-                )
                 raise
-        else:
-            raise
 
     size = final_file.stat().st_size
     logging.info("Downloaded successfully: %.1f KB saved", round(size / 1024, 1))
