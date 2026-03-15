@@ -14,8 +14,9 @@
 # ----------------------------
 # Database (database/)
 # ----------------------------
-# Ignore DuckDB database files.
-database/*.duckdb
+# Ignore all files in the database directory except for .gitkeep files to maintain directory structure.
+database/*
+!database/.gitkeep
 
 # ----------------------------
 # Data (data/)
