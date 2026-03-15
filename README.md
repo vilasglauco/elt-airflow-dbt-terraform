@@ -77,7 +77,7 @@ Main flow:
 │       ├── Dockerfile
 │       └── requirements.txt
 │
-├── infra/                       # Infrastructure as Code with Terraform (defines local Airflow & dbt infra)
+├── infra/                       # IaC with Terraform (defines Airflow & dbt)
 │   ├── main.tf
 │   ├── outputs.tf
 │   ├── providers.tf
